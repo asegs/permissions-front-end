@@ -164,8 +164,10 @@ const Home = () => {
         return nds.map(node=>{
             const included = includedNodes.includes(node.id) || includedNodes.length === 0;
             const selected = selectedNode === node.id;
+            const data = nodesData[node.id];
+            const isLeaf = data && data.additions.length === 0 && data.subtractions.length === 0;
             const bgColor = selected ? "#c5fdc5" : included ? "#faf9f9" : "#d0cece";
-            return {...node,style: {backgroundColor: bgColor , color: included ? "#000" : "#6a6868", width: "fit-content"}}
+            return {...node,style: {backgroundColor: bgColor , color: included ? "#000" : "#6a6868", width: "fit-content", borderColor: included && isLeaf  && includedNodes.length > 0 ? "#c79f01" : "#000"}}
         })
     }
 
