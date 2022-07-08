@@ -24,16 +24,16 @@ const Home = () => {
 
     const onNodeClick = useCallback(
         async (_, n) => {
-            console.log(nodesData)
             const selected = nodesData[n.id];
             setSelectedNode(n.id);
             if (selected.additions.length === 0 && selected.subtractions.length === 0) {
-                console.log(getNodeParents(n.id));
+                const parents = Array.from(new Set(getNodeParents(n.id)));
+                setIncludedNodes(parents);
                 return;
             }
             const results = await listPermissions(n.id);
             setIncludedNodes(results);
-    },[])
+    },[nodesData])
 
     const onSelectionChange = useCallback((params) => {
         const nodes = params.nodes;
@@ -52,7 +52,7 @@ const Home = () => {
     const getNodeParents = (nodeName) => {
         const parents = nodesData[nodeName].parents;
         if (parents.length === 0) {
-            return [];
+            return [nodeName];
         }
         return parents.flatMap(parent=>{
             return [nodeName, ...getNodeParents(parent)]
@@ -186,7 +186,6 @@ const Home = () => {
                 for (let i = 0 ; i < permissions.length ; i ++ ) {
                     nodeMap[permissions[i].name] = permissions[i];
                 }
-                console.log(nodeMap)
 
                 setNodesData(nodeMap);
                 setNodes(colorNodes(positionNodes(permissions)));
