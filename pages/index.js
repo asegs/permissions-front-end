@@ -13,12 +13,27 @@ const Home = () => {
     const [selectedNode, setSelectedNode] = useState("");
     const [selectedEdge, setSelectedEdge] = useState({});
     const [includedNodes, setIncludedNodes] = useState([]);
+    const [nodesData,setNodesData] = useState({})
 
 
 
     const onConnect = useCallback((params) => setEdges((_) => {
         modifyConnection(params.source, params.target, true);
     }), []);
+
+
+    const onNodeClick = useCallback(
+        async (_, n) => {
+            console.log(nodesData)
+            const selected = nodesData[n.id];
+            setSelectedNode(n.id);
+            if (selected.additions.length === 0 && selected.subtractions.length === 0) {
+                console.log(getNodeParents(n.id));
+                return;
+            }
+            const results = await listPermissions(n.id);
+            setIncludedNodes(results);
+    },[])
 
     const onSelectionChange = useCallback((params) => {
         const nodes = params.nodes;
@@ -33,6 +48,16 @@ const Home = () => {
             setSelectedEdge("");
         }
     }, [])
+
+    const getNodeParents = (nodeName) => {
+        const parents = nodesData[nodeName].parents;
+        if (parents.length === 0) {
+            return [];
+        }
+        return parents.flatMap(parent=>{
+            return [nodeName, ...getNodeParents(parent)]
+        })
+    }
 
 
     const addNode = () => {
@@ -150,13 +175,22 @@ const Home = () => {
         setNodes(colorNodes(nodes));
     }
 
+
     const renderAll = () => {
         fetch("http://localhost:4000/load?org_name=test-org").then(
             res => res.json()
         ).then(
             body => {
-                setNodes(colorNodes(positionNodes(body["permissions"])));
-                setEdges(body["permissions"].flatMap(perm => {
+                const permissions = body["permissions"];
+                const nodeMap = {};
+                for (let i = 0 ; i < permissions.length ; i ++ ) {
+                    nodeMap[permissions[i].name] = permissions[i];
+                }
+                console.log(nodeMap)
+
+                setNodesData(nodeMap);
+                setNodes(colorNodes(positionNodes(permissions)));
+                setEdges(permissions.flatMap(perm => {
                     return perm["parents"].map(conn => {
                         return {
                             id: perm.name + "_to_" + conn,
@@ -186,13 +220,7 @@ const Home = () => {
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
-                onNodeClick = {
-                    async (_, n) => {
-                        setSelectedNode(n.id);
-                        const results = await listPermissions(n.id);
-                        setIncludedNodes(results);
-                    }
-                }
+                onNodeClick = {onNodeClick}
                 onEdgeClick = {
                     (_, e) => {
                         setSelectedEdge(e)
