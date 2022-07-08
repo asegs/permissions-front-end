@@ -80,7 +80,7 @@ const Home = () => {
             (body) => {
                 return body["results"];
             }
-        )
+        );
     }
 
     const positionNodes = (permissions) => {
@@ -149,7 +149,7 @@ const Home = () => {
 
     useEffect(() => {
         renderAll();
-    },[]);
+    },[includedNodes]);
 
     return (
         <div style={{ height: 800 }}>
@@ -161,10 +161,9 @@ const Home = () => {
                 onConnect={onConnect}
                 onNodeClick = {
                     async (_, n) => {
-                        await setSelectedNode(n.id);
+                        setSelectedNode(n.id);
                         const results = await listPermissions(n.id);
-                        await setIncludedNodes(results);
-                        await renderAll();
+                        setIncludedNodes(results);
                     }
                 }
                 onEdgeClick = {
