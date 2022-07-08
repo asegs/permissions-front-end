@@ -117,14 +117,23 @@ const Home = () => {
         }
         return g.nodes().map(node=>{
             const pos = g.node(node);
-            const included = includedNodes.includes(node) || includedNodes.length === 0
             return {
                 id: node,
                 position: {x: pos.x, y: (invert ? maxY - pos.y + highestTile : pos.y)},
-                data: {label:node},
-                style: {backgroundColor: included ? "#faf9f9" : "#d0cece", color: included ? "#000" : "#6a6868"}
+                data: {label:node}
             }
         });
+    }
+
+    const colorNodes = (nds) => {
+        return nds.map(node=>{
+            const included = includedNodes.includes(node.id) || includedNodes.length === 0;
+            return {...node,style: {backgroundColor: included ? "#faf9f9" : "#d0cece", color: included ? "#000" : "#6a6868"}}
+        })
+    }
+
+    const lightRedrawAll = () => {
+        setNodes(colorNodes(nodes));
     }
 
     const renderAll = () => {
@@ -132,7 +141,7 @@ const Home = () => {
             res => res.json()
         ).then(
             body => {
-                setNodes(positionNodes(body["permissions"]));
+                setNodes(colorNodes(positionNodes(body["permissions"])));
                 setEdges(body["permissions"].flatMap(perm => {
                     return perm["parents"].map(conn => {
                         return {
@@ -149,7 +158,11 @@ const Home = () => {
 
     useEffect(() => {
         renderAll();
-    },[includedNodes]);
+    },[]);
+
+    useEffect(() => {
+        lightRedrawAll();
+    },[includedNodes])
 
     return (
         <div style={{ height: 800 }}>
