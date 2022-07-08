@@ -20,6 +20,20 @@ const Home = () => {
         modifyConnection(params.source, params.target, true);
     }), []);
 
+    const onSelectionChange = useCallback((params) => {
+        const nodes = params.nodes;
+        const edges = params.edges;
+
+        if (nodes.length === 0) {
+            setSelectedNode("");
+            setIncludedNodes([]);
+        }
+
+        if (edges.length === 0) {
+            setSelectedEdge("");
+        }
+    }, [])
+
 
     const addNode = () => {
         const requestOptions = {
@@ -184,6 +198,7 @@ const Home = () => {
                         setSelectedEdge(e)
                     }
                 }
+                onSelectionChange = {onSelectionChange}
             >
                 <MiniMap />
                 <Controls />
