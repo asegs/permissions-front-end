@@ -24,15 +24,11 @@ const Home = () => {
 
     const onNodeClick = useCallback(
         async (_, n) => {
-            const selected = nodesData[n.id];
             setSelectedNode(n.id);
-            if (selected.additions.length === 0 && selected.subtractions.length === 0) {
-                const parents = Array.from(new Set(getNodeParents(n.id)));
-                setIncludedNodes(parents);
-                return;
-            }
-            const results = await listPermissions(n.id);
-            setIncludedNodes(results);
+            const children = await listPermissions(n.id);
+            const parents = getNodeParents(n.id);
+            const adjacent = Array.from(new Set([...children,...parents]));
+            setIncludedNodes(adjacent);
     },[nodesData])
 
     const onSelectionChange = useCallback((params) => {
@@ -128,7 +124,7 @@ const Home = () => {
         g.setGraph({});
         g.setDefaultEdgeLabel(function() { return {}; });
         permissions.forEach(perm=>{
-            g.setNode(perm.name,{ label: perm.name,  width: 144, height: 100 })
+            g.setNode(perm.name,{ label: perm.name,  width: perm.name.length * 6 + 50, height: 100 })
         })
         permissions.forEach(perm => {
             perm["parents"].forEach(conn => {
@@ -167,7 +163,9 @@ const Home = () => {
     const colorNodes = (nds) => {
         return nds.map(node=>{
             const included = includedNodes.includes(node.id) || includedNodes.length === 0;
-            return {...node,style: {backgroundColor: included ? "#faf9f9" : "#d0cece", color: included ? "#000" : "#6a6868", width: "fit-content"}}
+            const selected = selectedNode === node.id;
+            const bgColor = selected ? "#c5fdc5" : included ? "#faf9f9" : "#d0cece";
+            return {...node,style: {backgroundColor: bgColor , color: included ? "#000" : "#6a6868", width: "fit-content"}}
         })
     }
 
