@@ -12,6 +12,7 @@ const Home = () => {
     const [newNodeName, setNewNodeName] = useState("");
     const [selectedNode, setSelectedNode] = useState("");
     const [selectedEdge, setSelectedEdge] = useState({});
+    const [includedNodes, setIncludedNodes] = useState([]);
 
 
 
@@ -72,6 +73,16 @@ const Home = () => {
             })
     }
 
+    const listPermissions = (nodeName) => {
+        return fetch("http://localhost:4000/view?org_name=test-org&name="+nodeName).then(
+            res => res.json()
+        ).then(
+            (body) => {
+                return body["results"];
+            }
+        )
+    }
+
     const positionNodes = (permissions) => {
         const parents = new Set(permissions.filter(perm=>perm.parents.length === 0 && (perm.additions.length > 0 || perm.subtractions.length > 0)).map(perm=>perm.name));
         const g = new dagre.graphlib.Graph();
@@ -106,10 +117,12 @@ const Home = () => {
         }
         return g.nodes().map(node=>{
             const pos = g.node(node);
+            const included = includedNodes.includes(node) || includedNodes.length === 0
             return {
                 id: node,
                 position: {x: pos.x, y: (invert ? maxY - pos.y + highestTile : pos.y)},
-                data: {label:node}
+                data: {label:node},
+                style: {backgroundColor: included ? "#faf9f9" : "#d0cece", color: included ? "#000" : "#6a6868"}
             }
         });
     }
@@ -147,13 +160,15 @@ const Home = () => {
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onNodeClick = {
-                    (_, n) => {
-                        setSelectedNode(n.id);
+                    async (_, n) => {
+                        await setSelectedNode(n.id);
+                        const results = await listPermissions(n.id);
+                        await setIncludedNodes(results);
+                        await renderAll();
                     }
                 }
                 onEdgeClick = {
                     (_, e) => {
-                        console.log(e)
                         setSelectedEdge(e)
                     }
                 }
