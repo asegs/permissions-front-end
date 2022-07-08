@@ -142,7 +142,7 @@ const Home = () => {
     const colorNodes = (nds) => {
         return nds.map(node=>{
             const included = includedNodes.includes(node.id) || includedNodes.length === 0;
-            return {...node,style: {backgroundColor: included ? "#faf9f9" : "#d0cece", color: included ? "#000" : "#6a6868"}}
+            return {...node,style: {backgroundColor: included ? "#faf9f9" : "#d0cece", color: included ? "#000" : "#6a6868", width: "fit-content"}}
         })
     }
 
