@@ -9,6 +9,7 @@ const initialEdges = [];
 const Home = () => {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+    const [orgName, setOrgName] = useState("test-org");
     const [newNodeName, setNewNodeName] = useState("");
     const [selectedNode, setSelectedNode] = useState("");
     const [selectedEdge, setSelectedEdge] = useState({});
@@ -61,7 +62,7 @@ const Home = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                "org_name": "test-org",
+                "org_name": orgName,
                 "name": newNodeName,
                 "additions": [],
                 "subtractions": []
@@ -79,7 +80,7 @@ const Home = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                "org_name": "test-org",
+                "org_name": orgName,
                 "name": selectedNode
             })
         };
@@ -95,7 +96,7 @@ const Home = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                "org_name": "test-org",
+                "org_name": orgName,
                 "from": tar,
                 "to": src,
                 "is_addition": true,
@@ -109,13 +110,27 @@ const Home = () => {
     }
 
     const listPermissions = (nodeName) => {
-        return fetch("http://localhost:4000/view?org_name=test-org&name="+nodeName).then(
+        return fetch("http://localhost:4000/view?org_name=" + orgName + "&name="+nodeName).then(
             res => res.json()
         ).then(
             (body) => {
                 return body["results"];
             }
         );
+    }
+
+    const initOrg = () => {
+        const requestOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                "org_name": orgName
+            })
+        };
+        fetch('http://localhost:4000/init', requestOptions)
+            .then(_ => {
+                renderAll();
+            })
     }
 
     const positionNodes = (permissions) => {
@@ -177,7 +192,7 @@ const Home = () => {
 
 
     const renderAll = () => {
-        fetch("http://localhost:4000/load?org_name=test-org").then(
+        fetch("http://localhost:4000/load?org_name="+orgName).then(
             res => res.json()
         ).then(
             body => {
@@ -232,6 +247,22 @@ const Home = () => {
 
                 <div style={{ position: 'absolute', left: 10, top: 10, zIndex: 4 }}>
                     <div>
+                        <input id="org-name" type="text" name="name" value={orgName} onChange={(e) => {
+                            setOrgName(e.target.value);
+                        }}/>
+                        <button
+                            id="load-org"
+                            onClick={(_) => renderAll()}
+                        >
+                            Load organization
+                        </button>
+                        <button
+                            id="init-org"
+                            onClick={(_) => initOrg()}
+                        >
+                            Create organization
+                        </button>
+                        <br/>
                         <input id="node-name" type="text" name="name" value={newNodeName} onChange={(e) => {
                             setNewNodeName(e.target.value);
                         }}/>
