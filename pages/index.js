@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import ReactFlow, { useNodesState, useEdgesState, addEdge, MiniMap, Controls} from 'react-flow-renderer';
+import ReactFlow, { useNodesState, useEdgesState, MiniMap, Controls} from 'react-flow-renderer';
 import dagre from 'dagre';
 
 const initialNodes = [];
@@ -16,100 +16,7 @@ const Home = () => {
     const [includedNodes, setIncludedNodes] = useState([]);
     const [nodesData,setNodesData] = useState({})
 
-
-
-    const onConnect = useCallback((params) => setEdges((_) => {
-        modifyConnection(params.source, params.target, true);
-    }), []);
-
-
-    const onNodeClick = useCallback(
-        async (_, n) => {
-            setSelectedNode(n.id);
-            const children = await listPermissions(n.id);
-            const parents = getNodeParents(n.id);
-            const adjacent = Array.from(new Set([...children,...parents]));
-            setIncludedNodes(adjacent);
-    },[nodesData])
-
-    const onSelectionChange = useCallback((params) => {
-        const nodes = params.nodes;
-        const edges = params.edges;
-
-        if (nodes.length === 0) {
-            setSelectedNode("");
-            setIncludedNodes([]);
-        }
-
-        if (edges.length === 0) {
-            setSelectedEdge("");
-        }
-    }, [])
-
-    const getNodeParents = (nodeName) => {
-        const parents = nodesData[nodeName].parents;
-        if (parents.length === 0) {
-            return [nodeName];
-        }
-        return parents.flatMap(parent=>{
-            return [nodeName, ...getNodeParents(parent)]
-        })
-    }
-
-
-    const addNode = () => {
-        const requestOptions = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                "org_name": orgName,
-                "name": newNodeName,
-                "additions": [],
-                "subtractions": []
-            })
-        };
-        fetch('http://localhost:4000/add', requestOptions)
-            .then(_ => {
-                renderAll();
-                setNewNodeName("")
-            })
-    }
-
-    const deleteNode = () => {
-        const requestOptions = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                "org_name": orgName,
-                "name": selectedNode
-            })
-        };
-        fetch('http://localhost:4000/delete', requestOptions)
-            .then(_ => {
-                renderAll();
-                setSelectedNode("")
-            })
-    }
-
-    const modifyConnection = (src,tar,isCreate) => {
-        const requestOptions = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                "org_name": orgName,
-                "from": tar,
-                "to": src,
-                "is_addition": true,
-                "is_create": isCreate
-            })
-        };
-        fetch('http://localhost:4000/edit', requestOptions)
-            .then(_ => {
-                renderAll();
-            })
-    }
-
-    const listPermissions = (nodeName) => {
+    const listPermissions = useCallback((nodeName) => {
         return fetch("http://localhost:4000/view?org_name=" + orgName + "&name="+nodeName).then(
             res => res.json()
         ).then(
@@ -117,20 +24,17 @@ const Home = () => {
                 return body["results"];
             }
         );
-    }
+    },[orgName])
 
-    const initOrg = () => {
-        const requestOptions = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                "org_name": orgName
-            })
-        };
-        fetch('http://localhost:4000/init', requestOptions)
-            .then(_ => {
-                renderAll();
-            })
+    const colorNodes = (nds) => {
+        return nds.map(node=>{
+            const included = includedNodes.includes(node.id) || includedNodes.length === 0;
+            const selected = selectedNode === node.id;
+            const data = nodesData[node.id];
+            const isLeaf = data && data.additions.length === 0 && data.subtractions.length === 0;
+            const bgColor = selected ? "#c5fdc5" : included ? "#faf9f9" : "#d0cece";
+            return {...node,style: {backgroundColor: bgColor , color: included ? "#000" : "#6a6868", width: "fit-content", borderColor: included && isLeaf  && includedNodes.length > 0 ? "#c79f01" : "#000"}}
+        })
     }
 
     const positionNodes = (permissions) => {
@@ -175,23 +79,7 @@ const Home = () => {
         });
     }
 
-    const colorNodes = (nds) => {
-        return nds.map(node=>{
-            const included = includedNodes.includes(node.id) || includedNodes.length === 0;
-            const selected = selectedNode === node.id;
-            const data = nodesData[node.id];
-            const isLeaf = data && data.additions.length === 0 && data.subtractions.length === 0;
-            const bgColor = selected ? "#c5fdc5" : included ? "#faf9f9" : "#d0cece";
-            return {...node,style: {backgroundColor: bgColor , color: included ? "#000" : "#6a6868", width: "fit-content", borderColor: included && isLeaf  && includedNodes.length > 0 ? "#c79f01" : "#000"}}
-        })
-    }
-
-    const lightRedrawAll = () => {
-        setNodes(colorNodes(nodes));
-    }
-
-
-    const renderAll = () => {
+    const renderAll = useCallback(() => {
         fetch("http://localhost:4000/load?org_name="+orgName).then(
             res => res.json()
         ).then(
@@ -216,6 +104,117 @@ const Home = () => {
                 }))
             }
         )
+    },[orgName,setNodesData,setNodes,setEdges,colorNodes,positionNodes]);
+
+    const modifyConnection = useCallback((src,tar,isCreate) => {
+        const requestOptions = {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                "org_name": orgName,
+                "from": tar,
+                "to": src,
+                "is_addition": true,
+                "is_create": isCreate
+            })
+        };
+        fetch('http://localhost:4000/edit', requestOptions)
+            .then(_ => {
+                renderAll();
+            })
+    },[orgName,renderAll]);
+
+
+
+    const onConnect = useCallback((params) => setEdges((_) => {
+        modifyConnection(params.source, params.target, true);
+    }), [setEdges,modifyConnection]);
+
+
+    const onNodeClick = useCallback(
+        async (_, n) => {
+            setSelectedNode(n.id);
+            const children = await listPermissions(n.id);
+            const parents = getNodeParents(n.id);
+            const adjacent = Array.from(new Set([...children,...parents]));
+            setIncludedNodes(adjacent);
+    },[nodesData,setSelectedNode,listPermissions,setIncludedNodes])
+
+    const onSelectionChange = useCallback((params) => {
+        const nodes = params.nodes;
+        const edges = params.edges;
+
+        if (nodes.length === 0) {
+            setSelectedNode("");
+            setIncludedNodes([]);
+        }
+
+        if (edges.length === 0) {
+            setSelectedEdge("");
+        }
+    }, [setSelectedNode,setIncludedNodes,setSelectedEdge])
+
+    const getNodeParents = (nodeName) => {
+        const parents = nodesData[nodeName].parents;
+        if (parents.length === 0) {
+            return [nodeName];
+        }
+        return parents.flatMap(parent=>{
+            return [nodeName, ...getNodeParents(parent)]
+        })
+    }
+
+    const addNode = useCallback(()=> {
+        const requestOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                "org_name": orgName,
+                "name": newNodeName,
+                "additions": [],
+                "subtractions": []
+            })
+        };
+        fetch('http://localhost:4000/add', requestOptions)
+            .then(_ => {
+                renderAll();
+                setNewNodeName("")
+            })
+    },[orgName,newNodeName,renderAll,setNewNodeName]);
+
+    const deleteNode = useCallback(() => {
+        const requestOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                "org_name": orgName,
+                "name": selectedNode
+            })
+        };
+        fetch('http://localhost:4000/delete', requestOptions)
+            .then(_ => {
+                renderAll();
+                setSelectedNode("")
+            })
+    },[orgName,selectedNode,renderAll,setSelectedNode]);
+
+
+    const initOrg = () => {
+        const requestOptions = {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                "org_name": orgName
+            })
+        };
+        fetch('http://localhost:4000/init', requestOptions)
+            .then(_ => {
+                renderAll();
+            })
+    }
+
+    const lightRedrawAll = () => {
+        setNodes(colorNodes(nodes));
     }
 
     useEffect(() => {
