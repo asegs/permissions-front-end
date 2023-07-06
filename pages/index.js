@@ -13,6 +13,7 @@ const Home = () => {
     const [newNodeName, setNewNodeName] = useState("");
     const [selectedNode, setSelectedNode] = useState("");
     const [selectedEdge, setSelectedEdge] = useState({});
+    const [isAdditive, setIsAdditive] = useState(true);
     const [includedNodes, setIncludedNodes] = useState([]);
     const [nodesData,setNodesData] = useState({})
 
@@ -94,11 +95,18 @@ const Home = () => {
                 setNodes(colorNodes(positionNodes(permissions)));
                 setEdges(permissions.flatMap(perm => {
                     return perm["parents"].map(conn => {
+                        const parent = nodeMap[conn];
+                        let isAdd = true;
+                        for (const subtractNames of parent.subtractions) {
+                            if (subtractNames === perm.name) {
+                                isAdd = false;
+                            }
+                        }
                         return {
                             id: perm.name + "_to_" + conn,
                             target: perm.name,
                             source: conn,
-                            style:{strokeWidth:4}
+                            style:{strokeWidth:4, stroke: isAdd ? '#9fff8d' : '#ff7575'}
                         }
                     })
                 }))
@@ -114,7 +122,7 @@ const Home = () => {
                 "org_name": orgName,
                 "from": tar,
                 "to": src,
-                "is_addition": true,
+                "is_addition": isAdditive,
                 "is_create": isCreate
             })
         };
@@ -236,6 +244,7 @@ const Home = () => {
                 onNodeClick = {onNodeClick}
                 onEdgeClick = {
                     (_, e) => {
+                        console.log(selectedEdge)
                         setSelectedEdge(e)
                     }
                 }
@@ -288,6 +297,15 @@ const Home = () => {
                         >
                             Delete selected edge
                         </button>
+                        <br/>
+                        <button
+                            id="toggle-additive"
+                            onClick={() => setIsAdditive(!isAdditive)}
+                            style={{backgroundColor:isAdditive ? '#9fff8d' : '#ff7575'}}
+                        >
+                            {isAdditive ? "Add permissions" : "Subtract permissions"}
+                        </button>
+
                     </div>
                 </div>
             </ReactFlow>
